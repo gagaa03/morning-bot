@@ -1,0 +1,35 @@
+name: 每日晨報機器人
+
+on:
+  # 每天台灣時間 07:30 自動執行（UTC 23:30 = 台灣 07:30）
+  schedule:
+    - cron: "30 23 * * *"
+
+  # 也可以在 GitHub 手動點「Run workflow」測試
+  workflow_dispatch:
+
+jobs:
+  send-morning-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 取出程式碼
+        uses: actions/checkout@v4
+
+      - name: 設定 Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: 安裝相依套件
+        run: npm ci
+
+      - name: 執行晨報機器人
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          TO_EMAIL: ${{ secrets.TO_EMAIL }}
+        run: npm start
