@@ -40,7 +40,7 @@ function buildEmailHtml(dateStr: string, content: string): string {
     <!-- Footer -->
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:20px 40px;">
       <p style="color:#94a3b8;font-size:12px;margin:0;line-height:1.6;">
-        由晨間機器人自動生成 · 資料來源：Yahoo Finance、Google Search、Gemini 2.0 Flash<br>
+        由晨間機器人自動生成 · 資料來源：Yahoo Finance、OpenWeatherMap、newsdata.io、Groq Llama 3.3<br>
         市場數據僅供參考，不構成投資建議。
       </p>
     </div>

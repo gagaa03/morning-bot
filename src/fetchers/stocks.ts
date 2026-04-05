@@ -70,14 +70,14 @@ async function fetchOne(symbol: string): Promise<StockResult | null> {
   }
 }
 
+async function fetchAll(): Promise<(StockResult | null)[]> {
+  return Promise.all(Object.keys(SYMBOLS).map((sym) => fetchOne(sym)));
+}
+
 export async function fetchAllStocks(): Promise<string> {
   console.log("📊 正在抓取股票資料...");
+  const results = await fetchAll();
 
-  const results = await Promise.all(
-    Object.keys(SYMBOLS).map((sym) => fetchOne(sym))
-  );
-
-  // 整理成 Gemini 能讀懂的文字表格
   const rows = Object.keys(SYMBOLS).map((sym, i) => {
     const r = results[i];
     if (!r) return `| ${SYMBOLS[sym]} | 資料取得失敗 | - | - |`;
@@ -89,5 +89,47 @@ export async function fetchAllStocks(): Promise<string> {
 | 名稱 | 最新價格 | 漲跌 | 漲跌幅 |
 |------|---------|------|--------|
 ${rows.join("\n")}
+`.trim();
+}
+
+export async function fetchStocksSection(): Promise<string> {
+  const results = await fetchAll();
+
+  const rows = Object.keys(SYMBOLS).map((sym, i) => {
+    const r = results[i];
+    if (!r) {
+      return `<tr><td style="padding:8px 12px;color:#1e293b;">${SYMBOLS[sym]}</td><td colspan="3" style="padding:8px 12px;color:#94a3b8;">資料取得失敗</td></tr>`;
+    }
+    const color = r.isUp ? "#16a34a" : "#dc2626";
+    const arrow = r.isUp ? "▲" : "▼";
+    return `
+<tr>
+  <td style="padding:8px 12px;color:#1e293b;font-weight:500;">${r.name}</td>
+  <td style="padding:8px 12px;font-weight:700;color:#1e293b;">${r.price}</td>
+  <td style="padding:8px 12px;color:${color};">${arrow} ${r.change}</td>
+  <td style="padding:8px 12px;color:${color};">${r.changePercent}</td>
+</tr>`.trim();
+  });
+
+  return `
+<div style="margin-bottom:32px;">
+  <h2 style="font-size:17px;font-weight:700;color:#1e293b;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #f1f5f9;">
+    📊 每日市場快訊
+  </h2>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;">
+    <thead>
+      <tr style="background:#f8fafc;">
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-weight:600;">名稱</th>
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-weight:600;">最新價格</th>
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-weight:600;">漲跌</th>
+        <th style="padding:8px 12px;text-align:left;color:#64748b;font-weight:600;">漲跌幅</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.join("\n      ")}
+    </tbody>
+  </table>
+</div>
+<hr style="border:none;border-top:1px solid #f1f5f9;margin:0 0 32px;">
 `.trim();
 }

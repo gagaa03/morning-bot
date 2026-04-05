@@ -2,19 +2,19 @@
  * index.ts — 主程式
  *
  * 執行流程：
- * 1. 從 Yahoo Finance 抓即時股票數據（不需要 API key）
- * 2. 把股票數據 + 你的晨報需求傳給 Gemini（啟用 Google Search）
- * 3. Gemini 搜尋今日新聞、天氣、前端動態，生成 HTML 內容
- * 4. 用 nodemailer 包成完整 email，透過 Gmail 寄出
+ * 1. 並行抓取：Yahoo Finance 股票、OpenWeatherMap 天氣、newsdata.io 新聞（台灣+全球+前端）
+ * 2. 一次呼叫 Groq（六合一）生成：財經摘要、全球新聞、大盤解讀、前端新聞、JS題、名言
+ * 3. 組裝所有 HTML 區塊，透過 Gmail 寄出
  */
 
 import "dotenv/config";
-import { fetchAllStocks } from "./fetchers/stocks.js";
-import { generateMorningReport } from "./ai/gemini.js";
+import { fetchAllStocks, fetchStocksSection } from "./fetchers/stocks.js";
+import { fetchWeatherSection } from "./fetchers/weather.js";
+import { fetchFinanceNewsRaw, fetchGlobalNewsRaw, fetchTechNewsRaw } from "./fetchers/news.js";
+import { generateDailyEmailContent } from "./ai/groq.js";
 import { sendMorningReport } from "./email/send.js";
 
 function getTaiwanDateStr(): string {
-  // 台灣時間（UTC+8）
   const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
   const y = now.getUTCFullYear();
   const m = String(now.getUTCMonth() + 1).padStart(2, "0");
@@ -29,14 +29,35 @@ async function main() {
   const dateStr = getTaiwanDateStr();
   console.log(`📅 今天是 ${dateStr}`);
 
-  // Step 1：抓股票數據
-  const stocks = await fetchAllStocks();
+  // Step 1：並行抓取所有即時資料
+  const [stockMarkdown, stocksSection, weatherSection, financeArticles, globalArticles, techArticles] =
+    await Promise.all([
+      fetchAllStocks(),
+      fetchStocksSection(),
+      fetchWeatherSection(),
+      fetchFinanceNewsRaw(),
+      fetchGlobalNewsRaw(),
+      fetchTechNewsRaw(),
+    ]);
 
-  // Step 2：呼叫 Gemini 生成晨報內容
-  const reportContent = await generateMorningReport(dateStr, stocks);
+  // Step 2：一次呼叫 Groq（六合一）
+  const { financeNews, globalNews, stockAnalysis, techNews, jsQuiz, inspiration } =
+    await generateDailyEmailContent(dateStr, stockMarkdown, financeArticles, globalArticles, techArticles);
 
-  // Step 3：寄出 email
-  await sendMorningReport(dateStr, reportContent);
+  // Step 3：依序組裝 email 內容
+  const content = [
+    financeNews,      // 📰 今日財經頭條（AI 摘要 + 自選股警示）
+    globalNews,       // 🌍 全球重要新聞
+    stocksSection,    // 📊 市場快訊（表格）
+    stockAnalysis,    // 📈 台股大盤解讀
+    techNews,         // 💻 前端生態系新聞（翻譯 + 摘要）
+    weatherSection,   // 🌤 台北今日天氣
+    jsQuiz,           // 🧠 JS / React 概念複習
+    inspiration,      // 📖 今日名言佳句
+  ].join("\n");
+
+  // Step 4：寄出
+  await sendMorningReport(dateStr, content);
 
   console.log("🎉 完成！");
 }
