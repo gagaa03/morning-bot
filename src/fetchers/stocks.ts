@@ -114,7 +114,7 @@ export async function fetchStocksSection(): Promise<string> {
   return `
 <div style="margin-bottom:32px;">
   <h2 style="font-size:17px;font-weight:700;color:#1e293b;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #f1f5f9;">
-    📊 每日市場快訊
+    📊 昨日市場快訊
   </h2>
   <table style="width:100%;border-collapse:collapse;font-size:14px;">
     <thead>

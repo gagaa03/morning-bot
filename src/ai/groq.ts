@@ -71,7 +71,7 @@ ${articlesToText(globalArticles)}
 【任務三：stockAnalysis】
 根據以下 Yahoo Finance 數據解讀台股大盤（長期投資人角度，2-3段）：
 ${stockTable}
-若數據為空或遇週末/假日，回傳：<p style="color:#475569;">今日非台股交易日，暫無大盤數據。</p>
+若數據為空或遇週末/假日，回傳：<p style="color:#475569;">昨日非台股交易日，暫無大盤數據。</p>
 重要數字用 <strong style="color:#16a34a;">綠色</strong>（漲）或 <strong style="color:#dc2626;">紅色</strong>（跌）標示。
 
 【任務四：techNews】
