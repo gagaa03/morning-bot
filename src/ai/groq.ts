@@ -64,7 +64,7 @@ ${articlesToText(financeArticles)}
 格式：<p style="margin:0 0 12px;line-height:1.7;"><strong style="color:#1e293b;">• [新聞標題]</strong><br><span style="color:#475569;font-size:14px;">[1-2句重點]</span></p>
 
 【任務二：globalNews】
-將以下英文全球新聞翻譯成繁體中文並整理為 3-5 則重點摘要：
+將以下英文全球新聞「全部翻譯成繁體中文」並整理為 3-5 則重點摘要，標題與內文均不得出現英文：
 ${articlesToText(globalArticles)}
 格式同任務一。
 
@@ -75,7 +75,7 @@ ${stockTable}
 重要數字用 <strong style="color:#16a34a;">綠色</strong>（漲）或 <strong style="color:#dc2626;">紅色</strong>（跌）標示。
 
 【任務四：techNews】
-將以下英文前端技術新聞翻譯成繁體中文並整理為 2-3 則摘要：
+將以下英文前端技術新聞「全部翻譯成繁體中文」並整理為 2-3 則摘要，標題與內文均不得出現英文：
 ${articlesToText(techArticles)}
 格式同任務一。
 

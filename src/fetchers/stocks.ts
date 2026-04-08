@@ -35,7 +35,9 @@ async function fetchOne(symbol: string): Promise<StockResult | null> {
         result: Array<{
           meta: {
             regularMarketPrice: number;
-            previousClose: number;
+            previousClose?: number;
+            chartPreviousClose?: number;
+            regularMarketPreviousClose?: number;
             currency: string;
           };
         }>;
@@ -46,7 +48,8 @@ async function fetchOne(symbol: string): Promise<StockResult | null> {
     if (!meta) return null;
 
     const price = meta.regularMarketPrice;
-    const prev = meta.previousClose;
+    const prev = meta.chartPreviousClose ?? meta.previousClose ?? meta.regularMarketPreviousClose;
+    if (!prev) return null;
     const change = price - prev;
     const changePercent = (change / prev) * 100;
     const isUp = change >= 0;
