@@ -35,7 +35,9 @@ async function fetchOne(symbol: string): Promise<StockResult | null> {
         result: Array<{
           meta: {
             regularMarketPrice: number;
-            previousClose: number;
+            chartPreviousClose?: number;
+            regularMarketPreviousClose?: number;
+            previousClose?: number;
             currency: string;
           };
         }>;
@@ -46,12 +48,19 @@ async function fetchOne(symbol: string): Promise<StockResult | null> {
     if (!meta) return null;
 
     const price = meta.regularMarketPrice;
-    const prev = meta.previousClose;
+    const prev = meta.chartPreviousClose ?? meta.regularMarketPreviousClose ?? meta.previousClose;
+
+    // 沒有前收盤價（例如假日、市場未開盤）就只顯示價格，不顯示漲跌
+    if (!prev || prev === 0) {
+      const isRate = symbol === "USDTWD=X";
+      const formatPrice = isRate ? price.toFixed(3) : price.toLocaleString("en-US", { maximumFractionDigits: 2 });
+      return { name: SYMBOLS[symbol], price: formatPrice, change: "–", changePercent: "–", isUp: true };
+    }
+
     const change = price - prev;
     const changePercent = (change / prev) * 100;
     const isUp = change >= 0;
 
-    // 匯率只需要顯示到小數點第 2 位，指數顯示到整數
     const isRate = symbol === "USDTWD=X";
     const formatPrice = isRate ? price.toFixed(3) : price.toLocaleString("en-US", { maximumFractionDigits: 2 });
     const formatChange = `${isUp ? "+" : ""}${change.toFixed(2)}`;

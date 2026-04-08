@@ -71,8 +71,8 @@ export async function fetchTechNewsRaw(): Promise<{ title: string; description: 
   const articles = await fetchNews({
     language: "en",
     category: "technology",
-    q: "React OR Next.js OR TypeScript OR Vite",
-    size: "3",
+    q: '"React" OR "Next.js" OR "TypeScript" OR "Vite" OR "Vue.js" OR "Tailwind CSS" OR "web developer"',
+    size: "5",
   });
   return articles.slice(0, 3).map((a) => ({ title: a.title, description: a.description }));
 }

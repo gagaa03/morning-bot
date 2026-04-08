@@ -2,15 +2,16 @@
  * index.ts — 主程式
  *
  * 執行流程：
- * 1. 並行抓取：Yahoo Finance 股票、OpenWeatherMap 天氣、newsdata.io 新聞（台灣+全球+前端）
- * 2. 一次呼叫 Groq（六合一）生成：財經摘要、全球新聞、大盤解讀、前端新聞、JS題、名言
- * 3. 組裝所有 HTML 區塊，透過 Gmail 寄出
+ * 1. 並行抓取：Yahoo Finance / OpenWeatherMap / newsdata.io / TWSE
+ * 2. 一次呼叫 Groq（七合一）生成所有 AI 區塊
+ * 3. 組裝 HTML，透過 Gmail 寄出
  */
 
 import "dotenv/config";
 import { fetchAllStocks, fetchStocksSection } from "./fetchers/stocks.js";
 import { fetchWeatherSection } from "./fetchers/weather.js";
 import { fetchFinanceNewsRaw, fetchGlobalNewsRaw, fetchTechNewsRaw } from "./fetchers/news.js";
+import { fetchTwseData } from "./fetchers/twse.js";
 import { generateDailyEmailContent } from "./ai/groq.js";
 import { sendMorningReport } from "./email/send.js";
 
@@ -30,30 +31,55 @@ async function main() {
   console.log(`📅 今天是 ${dateStr}`);
 
   // Step 1：並行抓取所有即時資料
-  const [stockMarkdown, stocksSection, weatherSection, financeArticles, globalArticles, techArticles] =
-    await Promise.all([
-      fetchAllStocks(),
-      fetchStocksSection(),
-      fetchWeatherSection(),
-      fetchFinanceNewsRaw(),
-      fetchGlobalNewsRaw(),
-      fetchTechNewsRaw(),
-    ]);
+  const [
+    stockMarkdown,
+    stocksSection,
+    weatherSection,
+    financeArticles,
+    globalArticles,
+    techArticles,
+    { institutionalText, marketVolumeText, watchlistText },
+  ] = await Promise.all([
+    fetchAllStocks(),
+    fetchStocksSection(),
+    fetchWeatherSection(),
+    fetchFinanceNewsRaw(),
+    fetchGlobalNewsRaw(),
+    fetchTechNewsRaw(),
+    fetchTwseData(),
+  ]);
 
-  // Step 2：一次呼叫 Groq（六合一）
-  const { financeNews, globalNews, stockAnalysis, techNews, jsQuiz, inspiration } =
-    await generateDailyEmailContent(dateStr, stockMarkdown, financeArticles, globalArticles, techArticles);
+  // Step 2：一次呼叫 Groq（七合一）
+  const {
+    financeNews,
+    globalNews,
+    stockAnalysis,
+    watchlistAnalysis,
+    techNews,
+    jsQuiz,
+    inspiration,
+  } = await generateDailyEmailContent(
+    dateStr,
+    stockMarkdown,
+    financeArticles,
+    globalArticles,
+    techArticles,
+    institutionalText,
+    marketVolumeText,
+    watchlistText,
+  );
 
   // Step 3：依序組裝 email 內容
   const content = [
-    financeNews,      // 📰 今日財經頭條（AI 摘要 + 自選股警示）
-    globalNews,       // 🌍 全球重要新聞
-    stocksSection,    // 📊 市場快訊（表格）
-    stockAnalysis,    // 📈 台股大盤解讀
-    techNews,         // 💻 前端生態系新聞（翻譯 + 摘要）
-    weatherSection,   // 🌤 台北今日天氣
-    jsQuiz,           // 🧠 JS / React 概念複習
-    inspiration,      // 📖 今日名言佳句
+    financeNews,        // 📰 今日財經頭條
+    globalNews,         // 🌍 全球重要新聞
+    stocksSection,      // 📊 昨日市場快訊（表格）
+    stockAnalysis,      // 📈 台股大盤解讀（含三大法人+量能）
+    watchlistAnalysis,  // ⭐ 自選股動態
+    techNews,           // 💻 前端生態系新聞
+    weatherSection,     // 🌤 台北今日天氣
+    jsQuiz,             // 🧠 JS / React 概念複習
+    inspiration,        // 📖 今日名言佳句
   ].join("\n");
 
   // Step 4：寄出
