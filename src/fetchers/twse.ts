@@ -150,10 +150,10 @@ export async function fetchWatchlistForeign(): Promise<WatchlistStock[]> {
     const results: WatchlistStock[] = [];
 
     for (const row of data.data) {
-      const code = row[0]?.trim();
+      const code = row[1]?.trim();  // row[0] 是空格，代號在 row[1]
       if (WATCHLIST.includes(code)) {
-        // 欄位：證券代號、證券名稱、買進股數、賣出股數、買賣超股數
-        const buySellShares = parseInt((row[4] ?? "0").replace(/,/g, ""), 10);
+        // 欄位：[空格, 代號, 名稱, 外資買進, 外資賣出, 外資買賣超, 陸資買進, 陸資賣出, 陸資買賣超, 合計買進, 合計賣出, 合計買賣超]
+        const buySellShares = parseInt((row[5] ?? "0").replace(/,/g, ""), 10);
         const buySellLots = Math.round(buySellShares / 1000); // 轉換為張
         const isNetBuy = buySellLots >= 0;
         results.push({
