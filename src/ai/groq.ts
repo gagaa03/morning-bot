@@ -29,7 +29,7 @@ function wrapSection(icon: string, title: string, content: string): string {
 
 function articlesToText(articles: { title: string; description: string | null }[]): string {
   return articles
-    .map((a, i) => `${i + 1}. 標題：${a.title}\n   摘要：${a.description ?? "（無）"}`)
+    .map((a, i) => `${i + 1}. ${a.title}\n   背景：${a.description ?? "（無）"}`)
     .join("\n");
 }
 
@@ -66,7 +66,7 @@ export async function generateDailyEmailContent(
 ${articlesToText(financeArticles)}
 另外，若有任何新聞涉及自選股（${watchlistStr}），請在該則新聞前加上：
 <span style="background:#fef3c7;color:#92400e;font-size:12px;padding:2px 6px;border-radius:4px;margin-right:6px;">⭐ 自選股</span>
-格式：<p style="margin:0 0 12px;line-height:1.7;"><strong style="color:#1e293b;">• [新聞標題]</strong><br><span style="color:#475569;font-size:14px;">[1-2句重點]</span></p>
+格式：<p style="margin:0 0 12px;line-height:1.7;"><strong style="color:#1e293b;">• 新聞名稱（直接寫，不要加任何前綴）</strong><br><span style="color:#475569;font-size:14px;">1-2句重點摘要</span></p>
 
 【任務二：globalNews】
 將以下英文全球新聞翻譯成繁體中文並整理為 3-5 則重點摘要：
