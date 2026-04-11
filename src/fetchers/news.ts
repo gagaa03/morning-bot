@@ -13,17 +13,28 @@ interface NewsdataResponse {
 }
 
 async function fetchNews(params: Record<string, string>): Promise<NewsArticle[]> {
-  const apiKey = process.env.NEWSDATA_API_KEY;
-  const query = new URLSearchParams({ apikey: apiKey!, ...params }).toString();
-  const url = `https://newsdata.io/api/1/news?${query}`;
+  try {
+    const apiKey = process.env.NEWSDATA_API_KEY;
+    const query = new URLSearchParams({ apikey: apiKey!, ...params }).toString();
+    const url = `https://newsdata.io/api/1/news?${query}`;
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`newsdata.io API 失敗: ${res.status}`);
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn(`⚠️ newsdata.io 回傳 ${res.status}，略過此區塊`);
+      return [];
+    }
 
-  const data = (await res.json()) as NewsdataResponse;
-  if (data.status !== "success") throw new Error("newsdata.io 回傳非 success");
+    const data = (await res.json()) as NewsdataResponse;
+    if (data.status !== "success") {
+      console.warn("⚠️ newsdata.io 回傳非 success，略過此區塊");
+      return [];
+    }
 
-  return data.results ?? [];
+    return data.results ?? [];
+  } catch (err) {
+    console.warn("⚠️ newsdata.io 連線失敗，略過此區塊:", err);
+    return [];
+  }
 }
 
 function renderArticles(articles: NewsArticle[]): string {

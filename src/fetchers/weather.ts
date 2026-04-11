@@ -22,36 +22,40 @@ function getOutfitTip(temp: number): string {
 export async function fetchWeatherSection(): Promise<string> {
   console.log("🌤 正在抓取台北天氣...");
 
-  const apiKey = process.env.OPENWEATHER_API_KEY;
-  const url = `https://api.openweathermap.org/data/2.5/weather?q=Taipei,TW&appid=${apiKey}&units=metric&lang=zh_tw`;
+  const fallback = `<div style="margin-bottom:32px;">
+  <h2 style="font-size:17px;font-weight:700;color:#1e293b;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #f1f5f9;">🌤 台北今日天氣</h2>
+  <p style="color:#94a3b8;font-size:14px;">天氣資料暫時無法取得，請稍後再試。</p>
+</div>
+<hr style="border:none;border-top:1px solid #f1f5f9;margin:0 0 32px;">`;
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`OpenWeatherMap API 失敗: ${res.status}`);
+  try {
+    const apiKey = process.env.OPENWEATHER_API_KEY;
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=Taipei,TW&appid=${apiKey}&units=metric&lang=zh_tw`;
 
-  const data = (await res.json()) as {
-    weather: Array<{ id: number; description: string }>;
-    main: { temp: number; temp_min: number; temp_max: number; humidity: number };
-    wind: { speed: number };
-    rain?: { "1h"?: number };
-  };
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn(`⚠️ OpenWeatherMap 回傳 ${res.status}，略過天氣區塊`);
+      return fallback;
+    }
 
-  const weatherId = data.weather[0].id;
-  const description = data.weather[0].description;
-  const temp = Math.round(data.main.temp);
-  const tempMin = Math.round(data.main.temp_min);
-  const tempMax = Math.round(data.main.temp_max);
-  const humidity = data.main.humidity;
-  const windSpeed = data.wind.speed;
-  const emoji = getWeatherEmoji(weatherId);
+    const data = (await res.json()) as {
+      weather: Array<{ id: number; description: string }>;
+      main: { temp: number; temp_min: number; temp_max: number; humidity: number };
+      wind: { speed: number };
+    };
 
-  const needUmbrella =
-    weatherId >= 200 && weatherId < 700
-      ? "☂️ 建議攜帶雨傘"
-      : "不需要帶傘";
+    const weatherId = data.weather[0].id;
+    const description = data.weather[0].description;
+    const temp = Math.round(data.main.temp);
+    const tempMin = Math.round(data.main.temp_min);
+    const tempMax = Math.round(data.main.temp_max);
+    const humidity = data.main.humidity;
+    const windSpeed = data.wind.speed;
+    const emoji = getWeatherEmoji(weatherId);
+    const needUmbrella = weatherId >= 200 && weatherId < 700 ? "☂️ 建議攜帶雨傘" : "不需要帶傘";
+    const outfitTip = getOutfitTip(temp);
 
-  const outfitTip = getOutfitTip(temp);
-
-  return `
+    return `
 <div style="margin-bottom:32px;">
   <h2 style="font-size:17px;font-weight:700;color:#1e293b;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #f1f5f9;">
     🌤 台北今日天氣
@@ -82,4 +86,8 @@ export async function fetchWeatherSection(): Promise<string> {
 </div>
 <hr style="border:none;border-top:1px solid #f1f5f9;margin:0 0 32px;">
 `.trim();
+  } catch (err) {
+    console.warn("⚠️ OpenWeatherMap 連線失敗，略過天氣區塊:", err);
+    return fallback;
+  }
 }
