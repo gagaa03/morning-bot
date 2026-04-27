@@ -3,14 +3,20 @@
  *
  * 執行流程：
  * 1. 並行抓取：Yahoo Finance / OpenWeatherMap / newsdata.io / TWSE
- * 2. 一次呼叫 Groq（七合一）生成所有 AI 區塊
+ * 2. 一次呼叫 Groq（九合一）生成所有 AI 區塊
  * 3. 組裝 HTML，透過 Gmail 寄出
  */
 
 import "dotenv/config";
 import { fetchAllStocks, fetchStocksSection } from "./fetchers/stocks.js";
 import { fetchWeatherSection } from "./fetchers/weather.js";
-import { fetchFinanceNewsRaw, fetchGlobalNewsRaw, fetchTechNewsRaw } from "./fetchers/news.js";
+import {
+  fetchFinanceNewsRaw,
+  fetchGlobalNewsRaw,
+  fetchTechNewsRaw,
+  fetchWatchlistNewsRaw,
+  fetchThemeNewsRaw,
+} from "./fetchers/news.js";
 import { fetchTwseData } from "./fetchers/twse.js";
 import { generateDailyEmailContent } from "./ai/groq.js";
 import { sendMorningReport } from "./email/send.js";
@@ -30,34 +36,42 @@ async function main() {
   const dateStr = getTaiwanDateStr();
   console.log(`📅 今天是 ${dateStr}`);
 
-  // Step 1：並行抓取所有即時資料
+  // Step 1：先抓股票以得知 isMarketDay
+  const stocksData = await fetchAllStocks();
+  const { markdown: stockMarkdown, isMarketDay, tradingDateLabel } = stocksData;
+
+  // Step 2：並行抓取其餘資料（TWSE 依交易日決定是否實際呼叫）
   const [
-    stockMarkdown,
     stocksSection,
     weatherSection,
     financeArticles,
     globalArticles,
     techArticles,
-    { institutionalText, marketVolumeText, watchlistText },
+    watchlistNewsArticles,
+    themeNewsArticles,
+    { institutionalText, marketVolumeText, watchlistText, topGainersText },
   ] = await Promise.all([
-    fetchAllStocks(),
-    fetchStocksSection(),
+    fetchStocksSection(isMarketDay, tradingDateLabel),
     fetchWeatherSection(),
     fetchFinanceNewsRaw(),
     fetchGlobalNewsRaw(),
     fetchTechNewsRaw(),
-    fetchTwseData(),
+    fetchWatchlistNewsRaw(),
+    fetchThemeNewsRaw(),
+    fetchTwseData(isMarketDay),
   ]);
 
-  // Step 2：一次呼叫 Groq（七合一）
+  // Step 3：一次呼叫 Groq（九合一）
   const {
     financeNews,
     globalNews,
     stockAnalysis,
     watchlistAnalysis,
+    watchlistNews,
     techNews,
     jsQuiz,
     inspiration,
+    themeBuzz,
   } = await generateDailyEmailContent(
     dateStr,
     stockMarkdown,
@@ -67,22 +81,27 @@ async function main() {
     institutionalText,
     marketVolumeText,
     watchlistText,
+    watchlistNewsArticles,
+    topGainersText,
+    themeNewsArticles,
   );
 
-  // Step 3：依序組裝 email 內容
+  // Step 4：依序組裝 email 內容
   const content = [
     financeNews,        // 📰 今日財經頭條
     globalNews,         // 🌍 全球重要新聞
     stocksSection,      // 📊 昨日市場快訊（表格）
     stockAnalysis,      // 📈 台股大盤解讀（含三大法人+量能）
-    watchlistAnalysis,  // ⭐ 自選股動態
+    watchlistAnalysis,  // ⭐ 自選股動態（外資買賣超）
+    watchlistNews,      // 📋 自選股近期新聞
+    themeBuzz,          // 🔥 市場發燒議題
     techNews,           // 💻 前端生態系新聞
     weatherSection,     // 🌤 台北今日天氣
     jsQuiz,             // 🧠 JS / React 概念複習
     inspiration,        // 📖 今日名言佳句
   ].join("\n");
 
-  // Step 4：寄出
+  // Step 5：寄出
   await sendMorningReport(dateStr, content);
 
   console.log("🎉 完成！");

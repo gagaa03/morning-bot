@@ -97,3 +97,25 @@ export async function fetchGlobalNewsRaw(): Promise<{ title: string; description
   });
   return articles.slice(0, 5).map((a) => ({ title: a.title, description: a.description }));
 }
+
+export async function fetchWatchlistNewsRaw(): Promise<{ title: string; description: string | null }[]> {
+  console.log("⭐ 正在抓取自選股新聞...");
+  const articles = await fetchNews({
+    country: "tw",
+    language: "zh",
+    q: "台積電 OR 台達電 OR 鈊象 OR 元大台灣50 OR 2330 OR 2308 OR 3293 OR 0050",
+    size: "5",
+  });
+  return articles.slice(0, 5).map((a) => ({ title: a.title, description: a.description }));
+}
+
+export async function fetchThemeNewsRaw(): Promise<{ title: string; description: string | null }[]> {
+  console.log("🔥 正在抓取產業主題新聞...");
+  const articles = await fetchNews({
+    country: "tw",
+    language: "zh",
+    q: "AI OR 半導體 OR 電動車 OR 伺服器 OR 散熱 OR 輝達 OR CoWoS OR HBM OR 機器人",
+    size: "5",
+  });
+  return articles.slice(0, 5).map((a) => ({ title: a.title, description: a.description }));
+}

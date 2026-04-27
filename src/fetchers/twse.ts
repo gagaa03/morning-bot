@@ -174,18 +174,86 @@ export async function fetchWatchlistForeign(): Promise<WatchlistStock[]> {
   }
 }
 
+// ── TWSE 上漲幅度前 20 名（發燒議題用）────────────────────────────
+export interface TopGainer {
+  code: string;
+  name: string;
+  close: number;
+  changePercent: number;
+}
+
+export async function fetchTopGainers(): Promise<TopGainer[]> {
+  try {
+    const res = await fetch(
+      "https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY_ALL?response=json",
+      { headers: TWSE_HEADERS }
+    );
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as {
+      stat: string;
+      data: string[][];
+    };
+
+    if (data.stat !== "OK" || !data.data) return [];
+
+    const gainers: TopGainer[] = [];
+
+    for (const row of data.data) {
+      // fields: [代號, 名稱, 成交股數, 成交筆數, 成交金額, 開盤, 最高, 最低, 收盤, 漲跌(+/-), 漲跌價差, ...]
+      const code = row[0]?.trim();
+      const name = row[1]?.trim();
+      const closeStr = row[8]?.replace(/,/g, "");
+      const sign = row[9]?.trim();
+      const diffStr = row[10]?.replace(/,/g, "");
+
+      if (!code || !name || !closeStr || closeStr === "--" || closeStr === "除權息") continue;
+
+      const close = parseFloat(closeStr);
+      const diff = parseFloat(diffStr ?? "0");
+      if (isNaN(close) || isNaN(diff) || close === 0 || diff <= 0) continue;
+
+      const change = sign === "+" ? diff : 0;
+      if (change === 0) continue;
+
+      const prevClose = close - change;
+      if (prevClose <= 0) continue;
+
+      const changePercent = (change / prevClose) * 100;
+      gainers.push({ code, name, close, changePercent });
+    }
+
+    return gainers
+      .sort((a, b) => b.changePercent - a.changePercent)
+      .slice(0, 20);
+  } catch {
+    return [];
+  }
+}
+
 // ── 組合成文字供 Groq 解讀 ────────────────────────────────────────
-export async function fetchTwseData(): Promise<{
+export async function fetchTwseData(isMarketDay = true): Promise<{
   institutionalText: string;
   marketVolumeText: string;
   watchlistText: string;
+  topGainersText: string;
 }> {
+  if (!isMarketDay) {
+    return {
+      institutionalText: "昨日非台股交易日",
+      marketVolumeText: "昨日非台股交易日",
+      watchlistText: "昨日非台股交易日",
+      topGainersText: "昨日非台股交易日",
+    };
+  }
+
   console.log("🏦 正在抓取 TWSE 三大法人與量能資料...");
 
-  const [institutional, volume, watchlist] = await Promise.all([
+  const [institutional, volume, watchlist, topGainers] = await Promise.all([
     fetchInstitutional(),
     fetchMarketVolume(),
     fetchWatchlistForeign(),
+    fetchTopGainers(),
   ]);
 
   const institutionalText = institutional
@@ -200,5 +268,9 @@ export async function fetchTwseData(): Promise<{
     ? watchlist.map((s) => `${s.code} ${s.name}：外資 ${s.foreignBuySell}`).join("　")
     : "自選股外資資料暫時無法取得";
 
-  return { institutionalText, marketVolumeText, watchlistText };
+  const topGainersText = topGainers.length > 0
+    ? topGainers.map((s) => `${s.code} ${s.name} +${s.changePercent.toFixed(2)}%`).join("、")
+    : "漲幅排行資料暫時無法取得";
+
+  return { institutionalText, marketVolumeText, watchlistText, topGainersText };
 }

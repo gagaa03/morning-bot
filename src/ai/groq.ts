@@ -44,20 +44,25 @@ export async function generateDailyEmailContent(
   institutionalText: string,
   marketVolumeText: string,
   watchlistText: string,
+  watchlistNewsArticles: RawArticle[],
+  topGainersText: string,
+  themeNewsArticles: RawArticle[],
 ): Promise<{
   financeNews: string;
   globalNews: string;
   stockAnalysis: string;
   watchlistAnalysis: string;
+  watchlistNews: string;
   techNews: string;
   jsQuiz: string;
   inspiration: string;
+  themeBuzz: string;
 }> {
-  console.log("🤖 Groq 正在產生今日內容（七合一）...");
+  console.log("🤖 Groq 正在產生今日內容（九合一）...");
 
   const watchlistStr = WATCHLIST.map((s) => `${s.code} ${s.name}`).join("、");
 
-  const prompt = `今天是 ${dateStr}。請完成以下七個任務，回傳純 JSON，欄位為 financeNews、globalNews、stockAnalysis、watchlistAnalysis、techNews、jsQuiz、inspiration。
+  const prompt = `今天是 ${dateStr}。請完成以下九個任務，回傳純 JSON，欄位為 financeNews、globalNews、stockAnalysis、watchlistAnalysis、techNews、watchlistNews、jsQuiz、inspiration、themeBuzz。
 ⚠️ 強制規定：所有英文來源內容必須翻譯成繁體中文後再輸出，JSON 欄位中不得出現英文句子，違反此規定視為錯誤。
 所有內容使用繁體中文，值為純 HTML + inline CSS，不要用 markdown 或 \`\`\` 包裹。
 
@@ -106,17 +111,40 @@ ${watchlistText}
 ${articlesToText(techArticles)}
 格式同任務一。
 
-【任務六：jsQuiz】
+【任務六：watchlistNews】
+整理以下關於自選股（${watchlistStr}）的新聞，若有則列出 1-3 則重點，若無相關新聞則回傳提示文字：
+${watchlistNewsArticles.length > 0 ? articlesToText(watchlistNewsArticles) : "（今日暫無自選股相關新聞）"}
+有新聞時格式同任務一，加上自選股 tag：
+<span style="background:#fef3c7;color:#92400e;font-size:12px;padding:2px 6px;border-radius:4px;margin-right:6px;">⭐ 自選股</span>
+無新聞時回傳：<p style="color:#94a3b8;font-size:14px;">今日暫無自選股相關新聞。</p>
+
+【任務七：jsQuiz】
 出一道中等難度的 JavaScript 或 React 概念題，格式：
 <p style="margin:0 0 8px;"><strong>題目：</strong>描述</p>
 <pre style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px;font-size:13px;overflow-x:auto;">程式碼</pre>
 <p style="margin:8px 0;"><strong>解答：</strong>答案</p>
 <p style="margin:8px 0;color:#475569;font-size:14px;"><strong>說明：</strong>2-3句</p>
 
-【任務七：inspiration】
+【任務八：inspiration】
 提供一句經典名言佳句（書籍或名人語錄），必須附上作者姓名和出處書名，格式：
 <blockquote style="border-left:4px solid #e2e8f0;margin:0;padding:12px 20px;color:#475569;font-style:italic;font-size:15px;line-height:1.8;">「名言內容」</blockquote>
-<p style="margin:8px 0 0;font-size:13px;color:#94a3b8;">— 作者姓名，《書名》</p>`;
+<p style="margin:8px 0 0;font-size:13px;color:#94a3b8;">— 作者姓名，《書名》</p>
+
+【任務九：themeBuzz】
+根據以下昨日台股漲幅前 20 名以及產業主題新聞，找出 2-3 個市場發燒的投資主題，每個主題附上相關個股舉例與 1-2 句解讀：
+
+漲幅排行：${topGainersText}
+
+產業主題新聞：
+${themeNewsArticles.length > 0 ? articlesToText(themeNewsArticles) : "（今日暫無主題新聞）"}
+
+若漲幅排行為「昨日非台股交易日」，回傳：<p style="color:#475569;">昨日非台股交易日，暫無發燒議題數據。</p>
+否則每個主題格式：
+<p style="margin:0 0 14px;">
+  <strong style="color:#1e293b;">🔥 主題名稱</strong><br>
+  <span style="color:#475569;font-size:14px;">相關個股：代號1 名稱1、代號2 名稱2</span><br>
+  <span style="color:#475569;font-size:13px;">1-2句解讀</span>
+</p>`;
 
   const completion = await groq.chat.completions.create({
     model: "llama-3.3-70b-versatile",
@@ -136,9 +164,11 @@ ${articlesToText(techArticles)}
     globalNews: string;
     stockAnalysis: string;
     watchlistAnalysis: string;
+    watchlistNews: string;
     techNews: string;
     jsQuiz: string;
     inspiration: string;
+    themeBuzz: string;
   };
 
   return {
@@ -146,8 +176,10 @@ ${articlesToText(techArticles)}
     globalNews:        wrapSection("🌍", "全球重要新聞", parsed.globalNews),
     stockAnalysis:     wrapSection("📈", "台股大盤解讀", parsed.stockAnalysis),
     watchlistAnalysis: wrapSection("⭐", "自選股動態", parsed.watchlistAnalysis),
+    watchlistNews:     wrapSection("📋", "自選股近期新聞", parsed.watchlistNews),
     techNews:          wrapSection("💻", "前端生態系新聞", parsed.techNews),
     jsQuiz:            wrapSection("🧠", "今日 JS / React 概念複習", parsed.jsQuiz),
     inspiration:       wrapSection("📖", "今日名言佳句", parsed.inspiration),
+    themeBuzz:         wrapSection("🔥", "市場發燒議題", parsed.themeBuzz),
   };
 }
