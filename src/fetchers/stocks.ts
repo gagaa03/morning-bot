@@ -85,14 +85,15 @@ async function fetchOne(symbol: string): Promise<FetchOneRaw> {
   }
 }
 
-// 判斷最後一筆 Yahoo Finance 資料是否為「昨天」的台灣市場收盤
+// 判斷最後一筆 Yahoo Finance 資料是否為「昨天或今天」的台灣市場交易
+// GitHub Actions cron 可能延遲 1-2 小時，導致台股開盤後才執行，
+// 此時 Yahoo Finance 回傳今日盤中時間戳而非昨日收盤，需同時接受。
 function detectTradingDay(regularMarketTime?: number): {
   isMarketDay: boolean;
   tradingDateLabel: string;
 } {
   if (!regularMarketTime) return { isMarketDay: false, tradingDateLabel: "–" };
 
-  // 台灣時間 = UTC+8
   const TW_OFFSET = 8 * 3600 * 1000;
   const marketDate = new Date(regularMarketTime * 1000 + TW_OFFSET);
 
@@ -101,14 +102,16 @@ function detectTradingDay(regularMarketTime?: number): {
   const d = String(marketDate.getUTCDate()).padStart(2, "0");
   const label = `${m}/${d}（週${weekdays[marketDate.getUTCDay()]}）`;
 
-  // 昨天的台灣日期
   const now = new Date(Date.now() + TW_OFFSET);
   const yesterday = new Date(now.getTime() - 24 * 3600 * 1000);
 
-  const isMarketDay =
-    marketDate.getUTCFullYear() === yesterday.getUTCFullYear() &&
-    marketDate.getUTCMonth() === yesterday.getUTCMonth() &&
-    marketDate.getUTCDate() === yesterday.getUTCDate();
+  const sameDay = (a: Date, b: Date) =>
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate();
+
+  // 接受昨天（正常情況）或今天（Actions 延遲、盤中執行）
+  const isMarketDay = sameDay(marketDate, yesterday) || sameDay(marketDate, now);
 
   return { isMarketDay, tradingDateLabel: label };
 }
