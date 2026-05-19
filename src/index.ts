@@ -3,7 +3,7 @@
  *
  * 執行流程：
  * 1. 並行抓取：Yahoo Finance / OpenWeatherMap / newsdata.io / TWSE
- * 2. 一次呼叫 Groq（九合一）生成所有 AI 區塊
+ * 2. 一次呼叫 Groq（八合一）生成所有 AI 區塊
  * 3. 組裝 HTML，透過 Gmail 寄出
  */
 
@@ -13,7 +13,6 @@ import { fetchWeatherSection } from "./fetchers/weather.js";
 import {
   fetchFinanceNewsRaw,
   fetchGlobalNewsRaw,
-  fetchTechNewsRaw,
   fetchWatchlistNewsRaw,
   fetchThemeNewsRaw,
 } from "./fetchers/news.js";
@@ -46,7 +45,6 @@ async function main() {
     weatherSection,
     financeArticles,
     globalArticles,
-    techArticles,
     watchlistNewsArticles,
     themeNewsArticles,
     { institutionalText, marketVolumeText, watchlistText, topGainersText },
@@ -55,20 +53,18 @@ async function main() {
     fetchWeatherSection(),
     fetchFinanceNewsRaw(),
     fetchGlobalNewsRaw(),
-    fetchTechNewsRaw(),
     fetchWatchlistNewsRaw(),
     fetchThemeNewsRaw(),
     fetchTwseData(isMarketDay),
   ]);
 
-  // Step 3：一次呼叫 Groq（九合一）
+  // Step 3：一次呼叫 Groq（八合一）
   const {
     financeNews,
     globalNews,
     stockAnalysis,
     watchlistAnalysis,
     watchlistNews,
-    techNews,
     jsQuiz,
     inspiration,
     themeBuzz,
@@ -77,7 +73,6 @@ async function main() {
     stockMarkdown,
     financeArticles,
     globalArticles,
-    techArticles,
     institutionalText,
     marketVolumeText,
     watchlistText,
@@ -95,7 +90,6 @@ async function main() {
     watchlistAnalysis,  // ⭐ 自選股動態（外資買賣超）
     watchlistNews,      // 📋 自選股近期新聞
     themeBuzz,          // 🔥 市場發燒議題
-    techNews,           // 💻 前端生態系新聞
     weatherSection,     // 🌤 台北今日天氣
     jsQuiz,             // 🧠 JS / React 概念複習
     inspiration,        // 📖 今日名言佳句
